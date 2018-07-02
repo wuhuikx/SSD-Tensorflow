@@ -61,6 +61,7 @@ def reshape_list(l, shape=None):
 def print_configuration(flags, ssd_params, data_sources, save_dir=None):
     """Print the training configuration.
     """
+    '''
     def print_config(stream=None):
         print('\n# =========================================================================== #', file=stream)
         print('# Training | Evaluation flags:', file=stream)
@@ -78,15 +79,16 @@ def print_configuration(flags, ssd_params, data_sources, save_dir=None):
         data_files = parallel_reader.get_data_files(data_sources)
         pprint(sorted(data_files), stream=stream)
         print('', file=stream)
+    '''
 
-    print_config(None)
+    #print_config(None)
     # Save to a text file as well.
     if save_dir is not None:
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         path = os.path.join(save_dir, 'training_config.txt')
-        with open(path, "w") as out:
-            print_config(out)
+        #with open(path, "w") as out:
+        #    print_config(out)
 
 
 def configure_learning_rate(flags, num_samples_per_epoch, global_step):
