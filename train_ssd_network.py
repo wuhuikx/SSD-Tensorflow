@@ -13,6 +13,7 @@
 # limitations under the License.
 # ==============================================================================
 """Generic training script that trains a SSD model using a given dataset."""
+import os
 import tensorflow as tf
 from tensorflow.python.ops import control_flow_ops
 
@@ -24,7 +25,8 @@ import tf_utils
 
 slim = tf.contrib.slim
 
-DATA_FORMAT = 'NCHW'
+#DATA_FORMAT = 'NCHW'
+DATA_FORMAT = 'NHWC'
 
 # =========================================================================== #
 # SSD Network flags.
@@ -197,11 +199,66 @@ def main(_):
             num_ps_tasks=0)
         # Create global_step.
         with tf.device(deploy_config.variables_device()):
-            global_step = slim.create_global_step()
+            global_step = tf.train.create_global_step()
+            #global_step = slim.create_global_step()
+        
+        def get_dataset(dataset_dir, file_pattern, split_name):
+            file_pattern = os.path.join(dataset_dir, file_pattern % split_name)
+            slim = tf.contrib.slim
+
+            # Features in Pascal VOC TFRecords.
+            keys_to_features = {
+                    'image/encoded': tf.FixedLenFeature((), tf.string, default_value=''),
+                    'image/format': tf.FixedLenFeature((), tf.string, default_value='jpeg'),
+                    'image/height': tf.FixedLenFeature([1], tf.int64),
+                    'image/width': tf.FixedLenFeature([1], tf.int64),
+                    'image/channels': tf.FixedLenFeature([1], tf.int64),
+                    'image/shape': tf.FixedLenFeature([3], tf.int64),
+                    'image/text/bbox/xmin': tf.VarLenFeature(dtype=tf.float32),
+                    'image/text/bbox/ymin': tf.VarLenFeature(dtype=tf.float32),
+                    'image/text/bbox/xmax': tf.VarLenFeature(dtype=tf.float32),
+                    'image/text/bbox/ymax': tf.VarLenFeature(dtype=tf.float32),
+                    'image/text/bbox/label': tf.VarLenFeature(dtype=tf.int64),
+                    'image/text/bbox/area': tf.VarLenFeature(dtype=tf.float32),
+                    }
+
+            items_to_handlers = {
+                    'image': slim.tfexample_decoder.Image('image/encoded', 'image/format'),
+                    'shape': slim.tfexample_decoder.Tensor('image/shape'),
+                    'text/bbox': slim.tfexample_decoder.BoundingBox(
+                    ['ymin', 'xmin', 'ymax', 'xmax'], 'image/text/bbox/'),
+                    'text/label': slim.tfexample_decoder.Tensor('image/text/bbox/label'),
+                    'text/area': slim.tfexample_decoder.Tensor('image/text/bbox/area'),
+                    }
+
+            decoder = slim.tfexample_decoder.TFExampleDecoder(keys_to_features, items_to_handlers)
+            labels_to_names = None
+            #if dataset_utils.has_labels(da)
+
+            ITEMS_TO_DESCRIPTIONS = {
+                    'image': 'A color image of varying height and width.',
+                    'shape': 'Shape of the image',
+                    'text/bbox': 'A list of bounding boxes, one per each object.',
+                    'text/label': 'A list of labels, one per each object.',
+                    'text/area': 'A list of areas',
+                    }
+                    
+            #if reader is None:
+            reader = tf.TFRecordReader
+            return slim.dataset.Dataset(
+                data_sources=file_pattern,
+                reader=reader,
+                decoder=decoder,
+                num_samples=15124,
+                items_to_descriptions=ITEMS_TO_DESCRIPTIONS,
+                num_classes=1,
+                labels_to_names=labels_to_names)
 
         # Select the dataset.
-        dataset = dataset_factory.get_dataset(
-            FLAGS.dataset_name, FLAGS.dataset_split_name, FLAGS.dataset_dir)
+        file_pattern = 'coco_%s_*.tfrecord'
+        #dataset = get_dataset(
+        #    FLAGS.dataset_name, FLAGS.dataset_split_name, FLAGS.dataset_dir, file_pattern)
+        dataset = get_dataset(FLAGS.dataset_dir, file_pattern, FLAGS.dataset_split_name)
 
         # Get the SSD network and its anchors.
         ssd_class = nets_factory.get_network(FLAGS.model_name)
@@ -230,8 +287,8 @@ def main(_):
                     shuffle=True)
             # Get for SSD network: image, labels, bboxes.
             [image, shape, glabels, gbboxes] = provider.get(['image', 'shape',
-                                                             'object/label',
-                                                             'object/bbox'])
+                                                             'text/label',
+                                                             'text/bbox'])
             # Pre-processing image, labels and bboxes.
             image, glabels, gbboxes = \
                 image_preprocessing_fn(image, glabels, gbboxes,
