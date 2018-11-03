@@ -4,14 +4,12 @@
 #unzip ssd_300_vgg.ckpt.zip
 
 #================create Dataset===================#
-:<<!
 DATASET_DIR='/lustre/dataset/VOC/VOCdevkit/VOC2007/'
-python tf_convert_data.py \
-    --dataset_name=pascalvoc \
-    --dataset_dir=/lustre/dataset/VOC/VOCdevkit/VOC2007/ \
-    --output_name=voc_2007_test \
-    --output_dir=./tfrecords1/
-!
+#python tf_convert_data.py \
+#    --dataset_name=pascalvoc \
+#    --dataset_dir=/lustre/dataset/VOC/VOCdevkit/VOC2007/ \
+#    --output_name=voc_2007_test \
+#    --output_dir=./tfrecords/
 #OUTPUT_DIR='./tfrecords'
 #python tf_convert_data.py \
 #    --dataset_name=pascalvoc \
@@ -39,6 +37,7 @@ CHECKPOINT_PATH=./checkpoints/ssd_300_vgg.ckpt
 #CHECKPOINT_PATH=./logs/model.ckpt-4721
 #CHECKPOINT_PATH=./logs/model.ckpt-4786
 
+:<<!
 python train_ssd_network.py \
     --train_dir=${TRAIN_DIR} \
     --dataset_dir=${DATASET_DIR} \
@@ -52,8 +51,8 @@ python train_ssd_network.py \
     --optimizer=adam \
     --learning_rate=0.001 \
     --batch_size=16
+!
 
-:<<!
 EVAL_DIR=${TRAIN_DIR}/eval
 DATASET_DIR='/home/huiwu1/dataset/coco-text/tfrecords/val/'
 python eval_ssd_network_text.py \
@@ -64,10 +63,10 @@ python eval_ssd_network_text.py \
     --model_name=ssd_300_vgg \
     --checkpoint_path=${TRAIN_DIR} \
     --wait_for_checkpoints=True \
-    --batch_size=16 \
+    --batch_size=1 \
     --max_num_batches=500
 
-
+:<<!
 DATASET_DIR='./tfrecords'
 TRAIN_DIR='./logs/'
 CHECKPOINT_PATH='./checkpoints/ssd_300_vgg.ckpt'
